@@ -30,8 +30,8 @@ func main() {
 	templates = template.Must(template.ParseGlob("templates/*.html"))
 	// using gorilla mux
 	r := mux.NewRouter()
-	r.HandleFunc("/", indexGetHandler).Methods("GET")
-	r.HandleFunc("/", indexPostHandler).Methods("POST")
+	r.HandleFunc("/", AuthRequired(indexGetHandler)).Methods("GET")
+	r.HandleFunc("/", AuthRequired(indexPostHandler)).Methods("POST")
 	// adding login for get and post
 	r.HandleFunc("/login", loginGetHandler).Methods("GET")
 	r.HandleFunc("/login", loginPostHandler).Methods("POST")
@@ -48,6 +48,17 @@ func main() {
 	http.ListenAndServe(":8080", nil)
 }
 
+func AuthRequired(handler http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		session, _ := store.Get(r, "session")
+		_, ok := session.Values["username"]
+		if !ok {
+			http.Redirect(w, r, "/login", 302)
+			return
+		}
+		handler.ServeHTTP(w, r)
+	}
+}
 func indexGetHandler(w http.ResponseWriter, r *http.Request) {
 	session, _ := store.Get(r, "session")
 	_, ok := session.Values["username"]
